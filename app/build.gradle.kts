@@ -43,6 +43,7 @@ dependencies {
     implementation("dev.kord:kord-core:0.13.1")
     implementation("com.aallam.openai:openai-client:3.7.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
+    implementation("com.vdurmont:emoji-java:5.1.1")
 }
 
 application {

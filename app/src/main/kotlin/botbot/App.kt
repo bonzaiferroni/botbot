@@ -28,13 +28,15 @@ suspend fun main() {
     val kord = Kord(discordToken)
     val bot = BotBot(service, botConfig, kord.selfId)
 
-    kord.on<MessageCreateEvent> {
-        println("message: ${message.content}")
+    println("starting up!")
 
+    kord.on<MessageCreateEvent> {
         try {
-            val reply = bot.process(message)
-            if (reply != null) {
-                message.channel.createMessage(reply)
+            println("message: ${message.content}")
+            val response = bot.process(message)
+            println("target: ${response.target}")
+            if (response.message != null) {
+                message.channel.createMessage(response.message)
             }
         } catch (e: Exception) {
             println("Error: ${e.message}")

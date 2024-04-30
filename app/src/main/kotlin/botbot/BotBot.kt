@@ -2,6 +2,8 @@ package botbot
 
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.entity.Message
+import dev.kord.core.entity.ReactionEmoji
+import kotlinx.datetime.Clock
 
 class BotBot(
     private val aiService: AiService,
@@ -10,12 +12,19 @@ class BotBot(
 ) {
     private val history: MutableMap<Snowflake, MutableList<Message>> = mutableMapOf()
 
-    suspend fun process(message: Message): String? {
-        if (!canHear(message)) return null
+    suspend fun process(message: Message): BotResponse {
+        if (!canHear(message)) return BotResponse(null, MessageTarget.Unknown)
         val history = getHistory(message)
-        if (!isForMe(message, history)) return null
+        val target = findMessageTarget(message, history)
+        if (target is MessageTarget.Unknown) BotResponse(null, target)
         message.channel.type()
-        return reply(message)
+        val response = reply(message)
+        if (response != null && response.isSingleEmoji()) {
+            message.addReaction(ReactionEmoji.Unicode(response))
+            message.channel.type()
+            return BotResponse(null, target)
+        }
+        return BotResponse(response, target)
     }
 
     private fun getHistory(message: Message): List<Message> {
@@ -42,14 +51,28 @@ class BotBot(
         return false
     }
 
-    private fun isForMe(message: Message, history: List<Message>): Boolean {
-        if (message.isDM() && message.isBonzai()) return true
-        if (message.mentionsUser("botbot", selfId)) return true
-        if (history.isRecentBackAndForth(selfId)) return true
-        return false
+    private fun findMessageTarget(message: Message, history: List<Message>): MessageTarget {
+        if (message.isDM() && message.isBonzai()) return MessageTarget.Bot("DM from bonzai")
+        if (message.mentionsUser(selfId)) return MessageTarget.Bot("Mentioned")
+        if (history.isRecentBackAndForth(selfId)) return MessageTarget.Bot("Back and forth")
+        return MessageTarget.Unknown
     }
 
     private suspend fun reply(message: Message): String? {
         return aiService.prompt(message.content)
     }
+}
+
+data class BotResponse(
+    val message: String?,
+    val target: MessageTarget
+)
+
+sealed class MessageTarget {
+    data class Bot(val reason: String) : MessageTarget() {
+        override fun toString(): String {
+            return "Bot($reason)"
+        }
+    }
+    data object Unknown : MessageTarget()
 }
