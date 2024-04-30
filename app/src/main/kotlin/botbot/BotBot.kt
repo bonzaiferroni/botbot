@@ -4,6 +4,7 @@ import dev.kord.common.entity.Snowflake
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.ReactionEmoji
 import kotlinx.datetime.Clock
+import kotlin.time.Duration.Companion.minutes
 
 class BotBot(
     private val aiService: AiService,
@@ -13,15 +14,18 @@ class BotBot(
     private val history: MutableMap<Snowflake, MutableList<Message>> = mutableMapOf()
 
     suspend fun process(message: Message): BotResponse {
-        if (!canHear(message)) return BotResponse(null, MessageTarget.Unknown)
         val history = getHistory(message)
+        return process(message, history)
+    }
+
+    private suspend fun process(message: Message, history: List<Message>): BotResponse {
+        if (!canHear(message)) return BotResponse(null, MessageTarget.Unknown)
         val target = findMessageTarget(message, history)
-        if (target is MessageTarget.Unknown) BotResponse(null, target)
+        if (target is MessageTarget.Unknown) return BotResponse(null, target)
         message.channel.type()
         val response = reply(message)
         if (response != null && response.isSingleEmoji()) {
             message.addReaction(ReactionEmoji.Unicode(response))
-            message.channel.type()
             return BotResponse(null, target)
         }
         return BotResponse(response, target)
@@ -32,14 +36,13 @@ class BotBot(
         if (!history.contains(key)) {
             history[key] = mutableListOf()
         }
-        val list = history[key]?.toList() ?: emptyList()
         history[key]?.add(message)
-        return list
+        return history[key]?.toList() ?: emptyList()
     }
 
     private fun canHear(message: Message): Boolean {
         if (message.author?.isBot != false) return false
-        if (message.isDM() && message.isBonzai()) return true
+        // if (message.isDM() && message.isBonzai()) return true
 
         val channelId = message.channel.id.value
         if (botConfig.safeChannels.contains(channelId)) return true
@@ -52,8 +55,8 @@ class BotBot(
     }
 
     private fun findMessageTarget(message: Message, history: List<Message>): MessageTarget {
-        if (message.isDM() && message.isBonzai()) return MessageTarget.Bot("DM from bonzai")
-        if (message.mentionsUser(selfId)) return MessageTarget.Bot("Mentioned")
+        // if (message.isDM() && message.isBonzai()) return MessageTarget.Bot("DM from bonzai")
+        if (message.mentionsUser("botbot", selfId)) return MessageTarget.Bot("Mentioned")
         if (history.isRecentBackAndForth(selfId)) return MessageTarget.Bot("Back and forth")
         return MessageTarget.Unknown
     }
@@ -67,12 +70,3 @@ data class BotResponse(
     val message: String?,
     val target: MessageTarget
 )
-
-sealed class MessageTarget {
-    data class Bot(val reason: String) : MessageTarget() {
-        override fun toString(): String {
-            return "Bot($reason)"
-        }
-    }
-    data object Unknown : MessageTarget()
-}

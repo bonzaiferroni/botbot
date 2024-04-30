@@ -14,14 +14,21 @@ fun Message.isBonzai(): Boolean {
 }
 
 fun Message.mentionsUser(name: String, id: Snowflake): Boolean {
-    return this.content.contains(name, ignoreCase = true) ||
+    return this.content.startsWith(name, ignoreCase = true) ||
             this.mentionedUserIds.contains(id)
 }
 
 fun Message.mentionsUser(id: Snowflake) = this.mentionedUserIds.contains(id)
 
 fun List<Message>.isRecentBackAndForth(id: Snowflake): Boolean {
-    return this.size > 1
-            && this[this.size - 2].author?.id == id
-            && this[this.size - 1].timestamp.plus(1.minutes) > Clock.System.now()
+    return this.size > 1 && this[this.size - 2].author?.id == id
+            && this.secondsSinceLastMessage()!! < 30
+}
+
+fun List<Message>.secondsSinceLastMessage(): Int? {
+    return if (this.isNotEmpty()) {
+        (Clock.System.now() - this[this.size - 1].timestamp).inWholeSeconds.toInt()
+    } else {
+        null
+    }
 }
