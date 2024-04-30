@@ -31,9 +31,13 @@ suspend fun main() {
     kord.on<MessageCreateEvent> {
         println("message: ${message.content}")
 
-        val reply = bot.process(message)
-        if (reply != null) {
-            message.channel.createMessage(reply)
+        try {
+            val reply = bot.process(message)
+            if (reply != null) {
+                message.channel.createMessage(reply)
+            }
+        } catch (e: Exception) {
+            println("Error: ${e.message}")
         }
     }
 

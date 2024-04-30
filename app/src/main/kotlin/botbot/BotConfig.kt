@@ -1,11 +1,13 @@
 package botbot
 
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 
+@Serializable
 data class BotConfig(
-    val allowedServers: List<ULong>
+    val safeChannels: List<ULong>
 ) {
 
     fun save() {
@@ -13,7 +15,7 @@ data class BotConfig(
     }
 
     companion object {
-        private val path = "../botconfig.json"
+        private val path = "botconfig.json"
         private val json by lazy { Json { ignoreUnknownKeys = true } }
 
         fun load(): BotConfig {
