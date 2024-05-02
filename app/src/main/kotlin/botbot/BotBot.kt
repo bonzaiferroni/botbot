@@ -3,27 +3,25 @@ package botbot
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.ReactionEmoji
-import kotlinx.datetime.Clock
-import kotlin.time.Duration.Companion.minutes
 
 class BotBot(
     private val aiService: AiService,
     private var botConfig: BotConfig,
     private val selfId: Snowflake
 ) {
-    private val history: MutableMap<Snowflake, MutableList<Message>> = mutableMapOf()
+    private val conversations: MutableMap<Snowflake, Conversation> = mutableMapOf()
 
     suspend fun process(message: Message): BotResponse {
-        val history = getHistory(message)
-        return process(message, history)
+        val conversation = getConversation(message)
+        return process(message, conversation)
     }
 
-    private suspend fun process(message: Message, history: List<Message>): BotResponse {
+    private suspend fun process(message: Message, conversation: Conversation): BotResponse {
         if (!canHear(message)) return BotResponse(null, MessageTarget.Unknown)
-        val target = findMessageTarget(message, history)
+        val target = findMessageTarget(message, conversation)
         if (target is MessageTarget.Unknown) return BotResponse(null, target)
         message.channel.type()
-        val response = reply(message)
+        val response = reply(message, conversation)
         if (response != null && response.isSingleEmoji()) {
             message.addReaction(ReactionEmoji.Unicode(response))
             return BotResponse(null, target)
@@ -31,13 +29,12 @@ class BotBot(
         return BotResponse(response, target)
     }
 
-    private fun getHistory(message: Message): List<Message> {
+    private fun getConversation(message: Message): Conversation {
         val key = message.channelId
-        if (!history.contains(key)) {
-            history[key] = mutableListOf()
-        }
-        history[key]?.add(message)
-        return history[key]?.toList() ?: emptyList()
+        var conversation = conversations[key] ?: Conversation(emptyList(), null)
+        conversation = conversation.copy(messages = conversation.messages + message)
+        conversations[key] = conversation
+        return conversation
     }
 
     private fun canHear(message: Message): Boolean {
@@ -54,15 +51,16 @@ class BotBot(
         return false
     }
 
-    private fun findMessageTarget(message: Message, history: List<Message>): MessageTarget {
+    private fun findMessageTarget(message: Message, conversation: Conversation): MessageTarget {
         // if (message.isDM() && message.isBonzai()) return MessageTarget.Bot("DM from bonzai")
         if (message.mentionsUser("botbot", selfId)) return MessageTarget.Bot("Mentioned")
-        if (history.isRecentBackAndForth(selfId)) return MessageTarget.Bot("Back and forth")
+        if (conversation.messages.isRecentBackAndForth(selfId)) return MessageTarget.Bot("Back and forth")
         return MessageTarget.Unknown
     }
 
-    private suspend fun reply(message: Message): String? {
-        return aiService.prompt(message.content)
+    private suspend fun reply(message: Message, conversation: Conversation): String? {
+        val botContentResponse = aiService.prompt(message.content, conversation) ?: return null
+        return botContentResponse.response
     }
 }
 
