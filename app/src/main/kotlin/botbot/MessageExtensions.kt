@@ -20,12 +20,12 @@ fun Message.mentionsUser(name: String, id: Snowflake): Boolean {
 
 fun Message.mentionsUser(id: Snowflake) = this.mentionedUserIds.contains(id)
 
-fun List<Message>.isRecentBackAndForth(id: Snowflake): Boolean {
-    return this.size > 1 && this[this.size - 2].author?.id == id
+fun List<MessageInfo>.isRecentBackAndForth(id: Snowflake): Boolean {
+    return this.size > 1 && this[this.size - 2].authorId == id
             && this.secondsSinceLastMessage()!! < 30
 }
 
-fun List<Message>.secondsSinceLastMessage(): Int? {
+fun List<MessageInfo>.secondsSinceLastMessage(): Int? {
     return if (this.isNotEmpty()) {
         (Clock.System.now() - this[this.size - 1].timestamp).inWholeSeconds.toInt()
     } else {

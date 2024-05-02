@@ -15,4 +15,4 @@
 .externalNativeBuild
 .cxx
 local.properties
-botconfig.json
+memory.json

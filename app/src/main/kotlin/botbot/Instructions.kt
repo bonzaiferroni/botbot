@@ -20,3 +20,11 @@ fun getPromptText(prompt: String, summary: String?): String {
     }
     return text + "user prompt:\n$prompt\n"
 }
+
+val summarizeInstructions = """
+    Your job is to summarize a conversation that you have been a part of. You will be provided
+    with a chat log that includes usernames, timestamps, and messages. In this chat, your username 
+    is botbot.
+    Your summary should include the main points of the conversation and any important details. It
+    should be concise and no more than 4000 characters long.
+""".trimIndent()

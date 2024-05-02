@@ -3,13 +3,14 @@ package botbot
 import dev.kord.common.entity.Snowflake
 import dev.kord.core.entity.Message
 import dev.kord.core.entity.ReactionEmoji
+import kotlin.math.max
 
 class BotBot(
     private val aiService: AiService,
-    private var botConfig: BotConfig,
+    private var jsonMemory: JsonMemory,
     private val selfId: Snowflake
 ) {
-    private val conversations: MutableMap<Snowflake, Conversation> = mutableMapOf()
+    // private val conversations: MutableMap<Snowflake, Conversation> = mutableMapOf()
 
     suspend fun process(message: Message): BotResponse {
         val conversation = getConversation(message)
@@ -31,9 +32,16 @@ class BotBot(
 
     private fun getConversation(message: Message): Conversation {
         val key = message.channelId
-        var conversation = conversations[key] ?: Conversation(emptyList(), null)
-        conversation = conversation.copy(messages = conversation.messages + message)
-        conversations[key] = conversation
+        var conversation = jsonMemory.conversations[key] ?: Conversation(emptyList(), null)
+        val dropCount = max(conversation.messages.size - 10, 0)
+        val messages = conversation.messages.drop(dropCount) + MessageInfo(
+            content = message.content,
+            authorId = message.author?.id ?: Snowflake(0),
+            timestamp = message.timestamp
+        )
+        conversation = conversation.copy(messages = messages)
+        jsonMemory.conversations[key] = conversation
+        jsonMemory.save()
         return conversation
     }
 
@@ -42,10 +50,10 @@ class BotBot(
         // if (message.isDM() && message.isBonzai()) return true
 
         val channelId = message.channel.id.value
-        if (botConfig.safeChannels.contains(channelId)) return true
+        if (jsonMemory.safeChannels.contains(channelId)) return true
         if (message.mentionsUser(selfId) && message.content.contains("you can talk here", ignoreCase = true)) {
-            botConfig = botConfig.copy(safeChannels = botConfig.safeChannels + channelId)
-            botConfig.save()
+            jsonMemory = jsonMemory.copy(safeChannels = jsonMemory.safeChannels + channelId)
+            jsonMemory.save()
             return true
         }
         return false

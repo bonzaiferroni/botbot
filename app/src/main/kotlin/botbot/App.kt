@@ -23,7 +23,7 @@ suspend fun main() {
     val discordToken = props.getProperty("dtoken")
     val openaiToken = props.getProperty("openai")
     val service = AiService(openaiToken)
-    val botConfig = BotConfig.load()
+    val botConfig = JsonMemory.load()
 
     val kord = Kord(discordToken)
     val bot = BotBot(service, botConfig, kord.selfId)

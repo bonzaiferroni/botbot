@@ -74,6 +74,16 @@ class AiService(token: String) {
         return content
     }
 
+    fun getSummary(conversation: Conversation): String {
+        val chatCompletionRequest = chatCompletionRequest {
+            model = ModelId("gpt-3.5-turbo-0125")
+            messages = listOf(
+                ChatMessage(role = ChatRole.System, content = summarizeInstructions),
+                ChatMessage(role = ChatRole.User, content = conversation.summary)
+            )
+        }
+    }
+
     private fun getMessage(message: ChatMessage?): AiResponse? {
         if (message == null) return null
         val toolCall = message.toolCalls?.first()
